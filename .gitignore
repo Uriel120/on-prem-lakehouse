@@ -1,2 +1,36 @@
-open source architecture/docker/.env
-open source architecture/docker/minio-data/*
+# Docker environment files
+*.env
+.env.*
+
+# MinIO data directory
+minio-data/
+
+# Docker volumes and build artifacts
+docker-compose.override.yml
+.docker/
+
+# Database files
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# Node modules if any
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
