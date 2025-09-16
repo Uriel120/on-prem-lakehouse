@@ -1,0 +1,78 @@
+services:
+  minio:
+    container_name: minio
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./minio-data:/data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      MINIO_REGION: "us-east-1"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+    volumes:
+      - ./minio/setup-minio.sh:/setup-minio.sh
+    entrypoint: ["/bin/sh", "/setup-minio.sh"]
+
+  Nessie:
+    image: projectnessie/nessie
+    container_name: nessie
+    ports:
+      - 19120:19120
+  Trino-coordinator:
+    image: trinodb/trino
+    container_name: trino-coordinator
+    ports:
+      - 8080:8080
+    environment:
+      - TRINO_SERVER_ADDRESS=trino-coordinator:8080
+    volumes:
+      - ./trino/coordinator/config.properties:/etc/trino/config.properties
+      - ./trino/catalog:/etc/trino/catalog
+      - ./trino/coordinator/init.sql:/etc/trino/init.sql
+    depends_on:
+      - minio
+      - Nessie
+  Trino-worker:
+    image: trinodb/trino
+    container_name: trino-worker
+    ports:
+      - 8081:8081
+    environment:
+      - TRINO_SERVER_ADDRESS=trino-coordinator:8080
+    volumes:
+      - ./trino/worker/config.properties:/etc/trino/config.properties
+    depends_on:
+      - Trino-coordinator
+      - minio
+      - Nessie
+  Trino-worker2:
+    image: trinodb/trino
+    container_name: trino-worker2
+    ports:
+      - 8082:8082
+    environment:
+      - TRINO_SERVER_ADDRESS=trino-coordinator:8080
+    volumes:
+      - ./trino/worker/config.properties:/etc/trino/config.properties
+    depends_on:
+      - Trino-coordinator
+      - minio
+      - Nessie
